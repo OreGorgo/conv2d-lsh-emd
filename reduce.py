@@ -77,10 +77,10 @@ def decoder(conv, filtersPerLayer, kernel_size, flat):
 
     dim = int(sqrt(flat / filtersPerLayer[-1]))
 
-    print(dim)
-
-    print(flat)
-    print(filtersPerLayer[-1])
+    # print(dim)
+    #
+    # print(flat)
+    # print(filtersPerLayer[-1])
 
     conv = tf.keras.layers.Dense(flat, activation='relu')(conv)
     conv = tf.keras.layers.Reshape((dim, dim, filtersPerLayer[-1]))(conv)
@@ -184,7 +184,7 @@ if __name__ == '__main__':
     images = images/np.max(images)
     images = images.reshape(-1, 28, 28, 1)
 
-    print(images.shape)
+    # print(images.shape)
 
     action = 1
     hyper_list = []
@@ -192,16 +192,17 @@ if __name__ == '__main__':
 
     while action < 3:
 
-        conv_layers, filtersPerLayer, kernel_size, epochs, batch_size = read_hyperparameters()
-        hyper_list.append((conv_layers, filtersPerLayer[-1], kernel_size[0], epochs, batch_size))
-
-        print('Do you want to load a pre-trained classifier? Type yes (y) or no (n)')
+        print('Do you want to load a pre-trained reducer? Type yes (y) or no (n)')
         answer = input()
 
         if answer == 'y' or answer == 'yes':
-            autoencoder_path = input("Type the pre-trained autoencoder path. ")
-            autoencoder = load_model(autoencoder_path)
+            model_path = input("Type the pre-trained reducer path. ")
+            model = load_model(model_path)
             break
+
+        conv_layers, filtersPerLayer, kernel_size, epochs, batch_size = read_hyperparameters()
+        hyper_list.append((conv_layers, filtersPerLayer[-1], kernel_size[0], epochs, batch_size))
+
 
         input_img = tf.keras.Input(shape=(28, 28, 1))
 
@@ -243,22 +244,22 @@ if __name__ == '__main__':
 
             action = int(input())
 
-    autoencoder.save('latent_autoencoder.h5')
 
-    if(conv_layers <3):
-        encoder_length = (len(autoencoder.layers) // 2) + 1
-    else:
-        encoder_length = (len(autoencoder.layers) // 2) + 2
-    # create a new model from the encoder part of autoencoder
-    model = tf.keras.Model(inputs=autoencoder.input, outputs=autoencoder.layers[encoder_length - 1].output)
+    if answer != 'y' and answer != 'yes':
+        if conv_layers < 3:
+            encoder_length = (len(autoencoder.layers) // 2) + 1
+        else:
+            encoder_length = (len(autoencoder.layers) // 2) + 2
+        # create a new model from the encoder part of autoencoder
+        model = tf.keras.Model(inputs=autoencoder.input, outputs=autoencoder.layers[encoder_length - 1].output)
+
+        model.save('reducer.h5')
 
     print(model.summary())
 
     #use the encoder model on every image
     pred = model.predict(images, verbose=1, use_multiprocessing=True)
     pred = pred.flatten()
-
-    print(np.max(pred))
 
     pred = pred / np.max(pred)
 

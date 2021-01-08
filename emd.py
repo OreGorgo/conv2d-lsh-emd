@@ -46,10 +46,6 @@ def EMD(image1, image2, w1, w2, centroids1, centroids2):
 
     problem += pulp.lpSum(objectiveFunction)
 
-    # #this constraint may not be needed !!!!!
-    # tempMin = min(sum(w1), sum(w2))
-    # problem += pulp.lpSum(constraint) == tempMin
-
     # constraints
     for i in range(size1):
         constraint1 = [variablesList[i][j] for j in range(size2)]
@@ -182,11 +178,12 @@ if __name__ == '__main__':
     query_images = query_images.reshape(-1, rows, cols)
 
 
-    # d_range = size
-    # q_range = query_size
+    d_range = size
+    q_range = query_size
 
-    d_range = 100
-    q_range = 10
+    #ranges for testing
+    # d_range = 100
+    # q_range = 10
 
     cluster_size = 7 #clusters will be of nxn pixels
     divisions = rows // cluster_size
@@ -197,8 +194,6 @@ if __name__ == '__main__':
     data_clusters, data_weights, data_centroids = create_clusters(images[0:d_range], cluster_size, divisions)
 
     query_clusters, query_weights, query_centroids = create_clusters(query_images[0:q_range], cluster_size, divisions)
-
-    print('FINISHED COMPUTING CLUSTERS')
 
     emd_results = []
 
@@ -212,10 +207,6 @@ if __name__ == '__main__':
 
         tempResult.sort(key=lambda tup: tup[0])
         emd_results.append(tempResult[0:10])
-        print(q)
-
-
-    print('TO EMD TELOS')
 
     knn_results = []
 
@@ -223,8 +214,6 @@ if __name__ == '__main__':
     for q in range(q_range):
         knn_results.append( knn(images[0:d_range], query_images[q]) )
 
-
-    print('TO KNN TELOS')
 
 
     #read the labels for both images and queries
@@ -238,8 +227,6 @@ if __name__ == '__main__':
     f.close()
     train_labels = np.array(labels)
 
-    print(train_labels)
-
     # read query labels
     f = open(test_labels_file, "rb")
     magic = struct.unpack('>I', f.read(4))[0]
@@ -248,8 +235,6 @@ if __name__ == '__main__':
 
     f.close()
     test_labels = np.array(labels)
-
-    print(test_labels)
 
     emd_acc_list = []
     knn_acc_list = []
