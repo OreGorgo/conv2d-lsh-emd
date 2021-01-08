@@ -1,7 +1,7 @@
 CC=g++ -std=c++11 -g -O3
 CFLAGS=-Wall 
 
-all: util.o hash.o lsh_func.o kmeans_func.o lsh_main.o kmeans_main.o search kmeans
+all: util.o hash.o lsh_func.o kmeans_func.o lsh_main.o kmeans_main.o search cluster
 util.o: util.cpp
 	$(CC) $(CFLAGS) -c util.cpp -o util.o
 hash.o: hash.cpp
@@ -19,12 +19,12 @@ kmeans_main.o: kmeans_main.cpp
 	
 search: util.o hash.o lsh_func.o lsh_main.o 
 	$(CC) $(CFLAGS) -o search util.o hash.o lsh_func.o lsh_main.o 
-kmeans: util.o hash.o kmeans_func.o kmeans_main.o 
-	$(CC) $(CFLAGS) -o kmeans util.o hash.o kmeans_func.o kmeans_main.o 
+cluster: util.o hash.o kmeans_func.o kmeans_main.o 
+	$(CC) $(CFLAGS) -o cluster util.o hash.o kmeans_func.o kmeans_main.o 
 
 
 .PHONY: clean
 
 clean:
-	rm -f util.o hash.o lsh_func.o kmeans_func.o lsh_main.o kmeans_main.o search kmeans
+	rm -f util.o hash.o lsh_func.o kmeans_func.o lsh_main.o kmeans_main.o search cluster
 

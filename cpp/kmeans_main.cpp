@@ -149,12 +149,9 @@ int main(int argc,char **argv)
             
             arr[j].pixels.push_back(temp);
 
-            //cout << (int) arr[j].pixels.at(i) <<" ";
         }
 
     }
-    
-    
     
     
     ifstream latent_fp(new_input_file.c_str(),  ios::in | ios::binary );
@@ -191,8 +188,8 @@ int main(int argc,char **argv)
         {
             latent_fp.read((char*)&temp_s,2);
             temp_s = bswap_16(temp_s);
-            
-            latent_arr[j].pixels.push_back(temp_s);
+                        
+            latent_arr[j].pixels.push_back((unsigned int) temp_s);
             
         }
 
@@ -261,21 +258,92 @@ int main(int argc,char **argv)
     ofstream output_fp;
     output_fp.open (output_file);
 
-    vector<cluster> s1_clusters;
-    vector <double> sil;
+    
+    //---------------------------------------------
+    
+    vector<cluster> latent_clusters;
+    vector <double> s2_sil;
 
 
     auto start = high_resolution_clock::now();
 
 
-    s1_clusters = kmeans_lloyds(arr, size, images, K, threshold);
+    latent_clusters = kmeans_lloyds(latent_arr, size, images, K, threshold);
 
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start); 
     
+    //create s2 cluster result
+    //It's the same as latent clusters but in original dimension
+    
+    vector<cluster> s2_clusters;
+    cluster temp_cluster; 
+    
+    for(int i=0;i<latent_clusters.size();i++)
+    {	
+		temp_cluster.centroid = latent_clusters[i].centroid;
+		//assign the points in original dimension to a cluster
+		for(int j=0;j<latent_clusters[i].points.size();j++)
+		{
+			temp_cluster.points.push_back(arr[latent_clusters[i].points[j].id]);
+		}
+		
+		s2_clusters.push_back(temp_cluster);
+		temp_cluster.points.clear();	
+		
+	}	
+	update_centroids(&s2_clusters); //create new centroids in original space for s2
+	
+	
+	
     //prints
+	output_fp<<"NEW SPACE"<<endl;
+	for(int i=0;i<s2_clusters.size();i++)
+    {
+	    output_fp<<"CLUSTER-"<<i+1<<" {size: "<<s2_clusters[i].points.size()<<" , "<<"centroid [ ";
+	    for(int j=0;j<size;j++)
+	    {
+            output_fp << s2_clusters[i].centroid.pixels[j];
+            if (j < size - 1)
+                output_fp << " , ";
+        }
 
+	    output_fp<<" ] }"<<endl;
+    }
+
+
+    output_fp <<"clustering_time: "<< (double)duration.count()/1000000.0 << endl;
+    s2_sil = silhouette(arr,images,s2_clusters);
+
+    output_fp<<"Silhouette: [ ";
+    for(int i=0;i<s2_sil.size();i++)
+    {
+        output_fp<<s2_sil[i];
+        if(i<s2_sil.size()-1)
+            output_fp<<" , ";
+    }
+    output_fp<<" ]"<<endl;
+    
+    unsigned int obj = objective(s2_clusters);
+	output_fp<<"Value of Objective Function: "<<obj<<".0"<<endl<<endl;
+    //-------------------------------------
+    
+    vector<cluster> s1_clusters;
+    vector <double> sil;
+
+
+    start = high_resolution_clock::now();
+
+
+    s1_clusters = kmeans_lloyds(arr, size, images, K, threshold);
+
+
+    stop = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(stop - start); 
+    
+    //prints
+	output_fp<<"ORIGINAL SPACE"<<endl;
 	for(int i=0;i<s1_clusters.size();i++)
     {
 	    output_fp<<"CLUSTER-"<<i+1<<" {size: "<<s1_clusters[i].points.size()<<" , "<<"centroid [ ";
@@ -304,81 +372,9 @@ int main(int argc,char **argv)
     }
     output_fp<<" ]"<<endl;
     
-    unsigned int obj = objective(s1_clusters);
-	output_fp<<"Value of Objective Function: "<<obj<<".0"<<endl<<endl<<endl;
+    obj = objective(s1_clusters);
+	output_fp<<"Value of Objective Function: "<<obj<<".0"<<endl<<endl;
     
-    
-    //---------------------------------------------
-    
-    vector<cluster> latent_clusters;
-    vector <double> s2_sil;
-
-
-    start = high_resolution_clock::now();
-
-
-    latent_clusters = kmeans_lloyds(latent_arr, size, images, K, threshold);
-
-
-    stop = high_resolution_clock::now();
-    duration = duration_cast<microseconds>(stop - start); 
-    
-    //create s2 cluster result
-    //It's the same as latent clusters but in original dimension
-    
-    vector<cluster> s2_clusters;
-    cluster temp_cluster; 
-    
-    for(int i=0;i<latent_clusters.size();i++)
-    {	
-		temp_cluster.centroid = latent_clusters[i].centroid;
-		//assign the points in original dimension to a cluster
-		for(int j=0;j<latent_clusters[i].points.size();j++)
-		{
-			temp_cluster.points.push_back(arr[latent_clusters[i].points[j].id]);
-		}
-		
-		s2_clusters.push_back(temp_cluster);
-		temp_cluster.points.clear();	
-		
-	}	
-	update_centroids(&s2_clusters); //create new centroids in original space for s2
-	
-	//prints
-	
-	
-    //prints
-
-	for(int i=0;i<s2_clusters.size();i++)
-    {
-	    output_fp<<"CLUSTER-"<<i+1<<" {size: "<<s2_clusters[i].points.size()<<" , "<<"centroid [ ";
-	    for(int j=0;j<size;j++)
-	    {
-            output_fp << s2_clusters[i].centroid.pixels[j];
-            if (j < size - 1)
-                output_fp << " , ";
-        }
-
-	    output_fp<<" ] }"<<endl;
-    }
-
-
-    output_fp <<"clustering_time: "<< (double)duration.count()/1000000.0 << endl;
-
-
-    s2_sil = silhouette(arr,images,s2_clusters);
-
-    output_fp<<"Silhouette: [ ";
-    for(int i=0;i<s2_sil.size();i++)
-    {
-        output_fp<<s2_sil[i];
-        if(i<s2_sil.size()-1)
-            output_fp<<" , ";
-    }
-    output_fp<<" ]"<<endl;
-    
-    obj = objective(s2_clusters);
-	output_fp<<"Value of Objective Function: "<<obj<<".0"<<endl<<endl<<endl;
     
     
     // -----S3-----------------
@@ -447,19 +443,7 @@ int main(int argc,char **argv)
     
     //prints
 
-	for(int i=0;i<s3_clusters.size();i++)
-    {
-	    output_fp<<"CLUSTER-"<<i+1<<" {size: "<<s3_clusters[i].points.size()<<" , "<<"centroid [ ";
-	    for(int j=0;j<size;j++)
-	    {
-            output_fp << s3_clusters[i].centroid.pixels[j];
-            if (j < size - 1)
-                output_fp << " , ";
-        }
-
-	    output_fp<<" ] }"<<endl;
-    }
-
+	output_fp<<"CLASSES AS CLUSTERS"<<endl;
 
 	vector <double> s3_sil;
     s3_sil = silhouette(arr,images,s3_clusters);
@@ -474,7 +458,7 @@ int main(int argc,char **argv)
     output_fp<<" ]"<<endl;
     
     obj = objective(s3_clusters);
-	output_fp<<"Value of Objective Function: "<<obj<<".0"<<endl<<endl<<endl;
+	output_fp<<"Value of Objective Function: "<<obj<<".0"<<endl<<endl;
     
 
 	delete[] arr;
